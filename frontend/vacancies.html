@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вакансии - TempTeachers</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">TempTeachers</h1>
+                <nav class="nav">
+                    <a href="/" class="nav-link">Главная</a>
+                    <a href="/vacancies" class="nav-link active">Вакансии</a>
+                    <a href="/register" class="nav-link">Для работодателей</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="vacancies-section">
+            <div class="container">
+                <div class="vacancies-header">
+                    <h2>Доступные вакансии</h2>
+                    <p>Найдите подходящую временную работу</p>
+                </div>
+
+                <div class="filters-section">
+                    <form class="filters-form" id="filters-form">
+                        <div class="filter-group">
+                            <label for="subject-filter">Предмет:</label>
+                            <input type="text" id="subject-filter" name="subject" placeholder="Например: Математика">
+                        </div>
+                        <div class="filter-group">
+                            <label for="start-date-filter">Дата начала:</label>
+                            <input type="date" id="start-date-filter" name="start_date">
+                        </div>
+                        <div class="filter-group">
+                            <label for="end-date-filter">Дата окончания:</label>
+                            <input type="date" id="end-date-filter" name="end_date">
+                        </div>
+                        <div class="filter-group">
+                            <label for="salary-filter">Оплата от:</label>
+                            <input type="text" id="salary-filter" name="min_salary" placeholder="Например: 20000">
+                        </div>
+                        <div class="filter-actions">
+                            <button type="submit" class="btn btn-primary">Применить фильтры</button>
+                            <button type="button" class="btn btn-secondary" id="clear-filters">Очистить</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="vacancies-list" id="vacancies-list">
+                    <div class="loading" id="loading">Загрузка вакансий...</div>
+                </div>
+
+                <div class="pagination" id="pagination" style="display: none;">
+                    <button class="btn btn-secondary" id="prev-page" disabled>Предыдущая</button>
+                    <span id="page-info">Страница 1</span>
+                    <button class="btn btn-secondary" id="next-page">Следующая</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2025 TempTeachers. Платформа для поиска временных преподавателей.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/vacancies.js"></script>
+</body>
+</html>

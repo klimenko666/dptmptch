@@ -1,0 +1,28 @@
+{
+  "name": "temp-teachers-platform",
+  "version": "1.0.0",
+  "description": "Platform for finding temporary teachers for educational institutions",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "init-db": "node backend/database/init.js",
+    "build": "echo 'No build step required for this project'",
+    "docker:build": "docker build -t temp-teachers .",
+    "docker:run": "docker run -p 3000:3000 temp-teachers"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2",
+    "express-session": "^1.17.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["education", "freelance", "teachers", "platform"],
+  "author": "CATEC DP",
+  "license": "MIT"
+}

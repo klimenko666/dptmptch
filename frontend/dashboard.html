@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - TempTeachers</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">TempTeachers</h1>
+                <nav class="nav">
+                    <a href="/" class="nav-link">Главная</a>
+                    <a href="/vacancies" class="nav-link">Вакансии</a>
+                    <a href="/dashboard" class="nav-link active">Кабинет</a>
+                </nav>
+                <div class="user-menu">
+                    <button class="btn btn-secondary" id="logout-btn">Выйти</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="dashboard-section">
+            <div class="container">
+                <div class="dashboard-header">
+                    <h2 id="welcome-message">Добро пожаловать!</h2>
+                    <button class="btn btn-primary" id="create-vacancy-btn">Создать вакансию</button>
+                </div>
+
+                <div class="dashboard-content">
+                    <div class="vacancies-section">
+                        <h3>Мои вакансии</h3>
+                        <div class="vacancies-list" id="my-vacancies">
+                            <div class="loading">Загрузка вакансий...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Create/Edit Vacancy Modal -->
+        <div class="modal" id="vacancy-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Создать вакансию</h3>
+                    <button class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <form class="vacancy-form" id="vacancy-form">
+                    <div class="form-group">
+                        <label for="vacancy-subject">Предмет / Специализация *</label>
+                        <input type="text" id="vacancy-subject" name="subject" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancy-type">Тип работы *</label>
+                        <select id="vacancy-type" name="work_type" required>
+                            <option value="">Выберите тип</option>
+                            <option value="замена">Замена преподавателя</option>
+                            <option value="временная">Временная нагрузка</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vacancy-start">Дата начала *</label>
+                            <input type="date" id="vacancy-start" name="start_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vacancy-end">Дата окончания *</label>
+                            <input type="date" id="vacancy-end" name="end_date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vacancy-schedule-from">График работы *</label>
+                            <input type="time" id="vacancy-schedule-from" name="schedule_from" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vacancy-schedule-to">До *</label>
+                            <input type="time" id="vacancy-schedule-to" name="schedule_to" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vacancy-salary-amount">Оплата *</label>
+                            <input type="number" id="vacancy-salary-amount" name="salary_amount" placeholder="50000" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vacancy-salary-type">Валюта/период *</label>
+                            <select id="vacancy-salary-type" name="salary_type" required>
+                                <option value="">Выберите</option>
+                                <option value="в месяц">KZT в месяц</option>
+                                <option value="за час">KZT за час</option>
+                                <option value="за день">KZT за день</option>
+                                <option value="за неделю">KZT за неделю</option>
+                                <option value="за урок">KZT за урок</option>
+                                <option value="за смену">KZT за смену</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancy-description">Описание вакансии *</label>
+                        <textarea id="vacancy-description" name="description" rows="4"
+                            placeholder="Опишите обязанности, требования к кандидату и другие важные детали" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancy-contact-phone">Номер телефона *</label>
+                        <input type="tel" id="vacancy-contact-phone" name="contact_phone" placeholder="+7 (777) 123-45-67" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancy-contact-email">Email</label>
+                        <input type="email" id="vacancy-contact-email" name="contact_email" placeholder="hr@company.kz">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancy-contact-person">Контактное лицо</label>
+                        <input type="text" id="vacancy-contact-person" name="contact_person" placeholder="Иван Иванов">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancel-btn">Отмена</button>
+                        <button type="submit" class="btn btn-primary" id="submit-btn">Создать вакансию</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <p>&copy; 2025 TempTeachers. Платформа для поиска временных преподавателей.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Node.js dependencies
+node_modules/
+
+# Environment / configs
+.env
+config.js      # если будет твой рабочий конфиг
+config.example.js # можно пушить пример, рабочий не пушить
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Build / cache
+dist/
+build/
+.cache/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
