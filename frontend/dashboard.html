@@ -28,19 +28,84 @@
             <div class="container">
                 <div class="dashboard-header">
                     <h2 id="welcome-message">Добро пожаловать!</h2>
-                    <button class="btn btn-primary" id="create-vacancy-btn">Создать вакансию</button>
+                    <div class="dashboard-actions">
+                        <button class="btn btn-outline" id="edit-profile-btn">Редактировать профиль</button>
+                        <button class="btn btn-primary" id="create-vacancy-btn">Создать вакансию</button>
+                    </div>
                 </div>
 
                 <div class="dashboard-content">
                     <div class="vacancies-section">
-                        <h3>Мои вакансии</h3>
-                        <div class="vacancies-list" id="my-vacancies">
-                            <div class="loading">Загрузка вакансий...</div>
+                        <div class="vacancies-tabs">
+                            <button class="tab-btn active" data-tab="active">Активные вакансии</button>
+                            <button class="tab-btn" data-tab="archived">Архив</button>
+                        </div>
+
+                        <div class="tab-content active" id="active-vacancies-tab">
+                            <div class="vacancies-list" id="active-vacancies">
+                                <div class="loading">Загрузка вакансий...</div>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="archived-vacancies-tab">
+                            <div class="vacancies-list" id="archived-vacancies">
+                                <div class="loading">Загрузка архива...</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
+
+        <!-- Edit Profile Modal -->
+        <div class="modal" id="profile-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Редактировать профиль компании</h3>
+                    <button class="modal-close" id="profile-modal-close">&times;</button>
+                </div>
+                <form id="profile-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="company-name">Название организации *</label>
+                            <input type="text" id="company-name" name="organization_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-name">Контактное лицо *</label>
+                            <input type="text" id="contact-name" name="contact_name" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="company-phone">Телефон *</label>
+                            <input type="tel" id="company-phone" name="phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="company-email">Email *</label>
+                            <input type="email" id="company-email" name="email" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="company-city">Город</label>
+                            <input type="text" id="company-city" name="city">
+                        </div>
+                        <div class="form-group">
+                            <label for="company-address">Адрес</label>
+                            <input type="text" id="company-address" name="address">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-description">Описание организации</label>
+                        <textarea id="company-description" name="description" rows="4" placeholder="Расскажите о вашей организации, учебном заведении..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="profile-cancel-btn">Отмена</button>
+                        <button type="submit" class="btn btn-primary" id="profile-submit-btn">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <!-- Create/Edit Vacancy Modal -->
         <div class="modal" id="vacancy-modal">

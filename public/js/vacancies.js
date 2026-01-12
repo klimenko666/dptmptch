@@ -152,18 +152,21 @@ function createVacancyCard(vacancy) {
     const workTypeText = vacancy.work_type === 'замена' ? 'Замена преподавателя' : 'Временная нагрузка';
     const scheduleText = `${vacancy.schedule_from} - ${vacancy.schedule_to}`;
     const salaryText = `${vacancy.salary_amount} KZT ${vacancy.salary_type}`;
+    const statusBadge = vacancy.status ? `<span class="status-badge status-${vacancy.status.toLowerCase()}">${getStatusText(vacancy.status)}</span>` : '';
+    const availabilityIndicator = getAvailabilityIndicator(vacancy.status);
 
     return `
-        <div class="vacancy-card">
+        <div class="vacancy-card ${vacancy.status === 'Открыта' ? 'available' : 'unavailable'}">
             <div class="vacancy-header">
                 <div>
-                    <h3 class="vacancy-title">${vacancy.subject}</h3>
+                    <h3 class="vacancy-title">${vacancy.subject} ${availabilityIndicator}</h3>
                     <div class="vacancy-meta">
-                        <span class="vacancy-meta-item">🏢 ${vacancy.organization_name}</span>
+                        <span class="vacancy-meta-item">🏢 <a href="/company/${vacancy.id}" class="company-link">${vacancy.organization_name}</a></span>
                         <span class="vacancy-meta-item">📅 ${formatDate(vacancy.start_date)} - ${formatDate(vacancy.end_date)}</span>
                         <span class="vacancy-meta-item">⏰ ${scheduleText}</span>
                         <span class="vacancy-meta-item">📋 ${workTypeText}</span>
                     </div>
+                    ${statusBadge}
                 </div>
             </div>
             <p class="vacancy-description">${truncateText(vacancy.description, 150)}</p>
@@ -184,6 +187,27 @@ function changePage(page) {
 
     currentPage = page;
     displayVacancies();
+}
+
+// Get status text
+function getStatusText(status) {
+    const statusMap = {
+        'Открыта': 'Открыта',
+        'Забронирована': 'Забронирована',
+        'Закрыта': 'Закрыта',
+        'Архивная': 'В архиве'
+    };
+    return statusMap[status] || status;
+}
+
+// Get availability indicator
+function getAvailabilityIndicator(status) {
+    if (status === 'Открыта') {
+        return '<span class="availability-indicator available">●</span>';
+    } else if (status === 'Забронирована' || status === 'Закрыта') {
+        return '<span class="availability-indicator unavailable">●</span>';
+    }
+    return '';
 }
 
 // Utility functions

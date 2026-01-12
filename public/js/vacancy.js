@@ -44,7 +44,10 @@ function displayVacancyDetail(vacancy) {
     const vacancyHTML = `
         <div class="vacancy-detail-header">
             <h1 class="vacancy-detail-title">${vacancy.subject}</h1>
-            <p class="vacancy-detail-org">${vacancy.organization_name}</p>
+            <p class="vacancy-detail-org">
+                <a href="/company/${vacancy.id}" class="company-link">${vacancy.organization_name}</a>
+            </p>
+            ${vacancy.status ? `<span class="status-badge status-${vacancy.status.toLowerCase()}">${getStatusText(vacancy.status)}</span>` : ''}
         </div>
 
         <div class="vacancy-detail-grid">
@@ -122,6 +125,17 @@ function createContactButtons(vacancy) {
     }
 
     return buttons;
+}
+
+// Get status text
+function getStatusText(status) {
+    const statusMap = {
+        'Открыта': 'Открыта',
+        'Забронирована': 'Забронирована',
+        'Закрыта': 'Закрыта',
+        'Архивная': 'В архиве'
+    };
+    return statusMap[status] || status;
 }
 
 // Utility functions

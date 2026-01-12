@@ -62,7 +62,10 @@ async function handleRegistration(e) {
         contact_name: formData.get('contact_name'),
         phone: formData.get('phone'),
         email: formData.get('email'),
-        password: formData.get('password')
+        password: formData.get('password'),
+        city: formData.get('city'),
+        address: formData.get('address'),
+        description: formData.get('description')
     };
 
     try {

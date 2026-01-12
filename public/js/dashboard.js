@@ -19,6 +19,18 @@ document.addEventListener('DOMContentLoaded', function() {
         createVacancyBtn.addEventListener('click', () => openVacancyModal());
     }
 
+    // Edit profile button
+    const editProfileBtn = document.getElementById('edit-profile-btn');
+    if (editProfileBtn) {
+        editProfileBtn.addEventListener('click', () => openProfileModal());
+    }
+
+    // Tab switching
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
     // Modal controls
     const modalClose = document.getElementById('modal-close');
     const cancelBtn = document.getElementById('cancel-btn');
@@ -46,6 +58,48 @@ document.addEventListener('DOMContentLoaded', function() {
     if (vacancyForm) {
         vacancyForm.addEventListener('submit', handleVacancySubmit);
     }
+
+    // Status change buttons (delegated event)
+    const activeVacanciesList = document.getElementById('active-vacancies');
+    if (activeVacanciesList) {
+        activeVacanciesList.addEventListener('click', function(e) {
+            if (e.target.classList.contains('status-btn')) {
+                const vacancyId = e.target.dataset.id;
+                const newStatus = e.target.dataset.status;
+                if (vacancyId && newStatus) {
+                    handleStatusChange(vacancyId, newStatus);
+                }
+            }
+        });
+    }
+
+    // Profile modal controls
+    const profileModalClose = document.getElementById('profile-modal-close');
+    const profileCancelBtn = document.getElementById('profile-cancel-btn');
+
+    if (profileModalClose) {
+        profileModalClose.addEventListener('click', closeProfileModal);
+    }
+
+    if (profileCancelBtn) {
+        profileCancelBtn.addEventListener('click', closeProfileModal);
+    }
+
+    // Profile modal outside click
+    const profileModal = document.getElementById('profile-modal');
+    if (profileModal) {
+        profileModal.addEventListener('click', function(e) {
+            if (e.target === profileModal) {
+                closeProfileModal();
+            }
+        });
+    }
+
+    // Profile form
+    const profileForm = document.getElementById('profile-form');
+    if (profileForm) {
+        profileForm.addEventListener('submit', handleProfileSubmit);
+    }
 });
 
 // Check authentication and load employer data
@@ -56,7 +110,7 @@ async function checkAuthAndLoadData() {
             const data = await response.json();
             currentEmployer = data.employer;
             updateWelcomeMessage();
-            loadEmployerVacancies();
+            loadActiveVacancies(); // Load active vacancies by default
         } else {
             // Not authenticated, redirect to login
             window.location.href = '/register';
@@ -107,6 +161,8 @@ function createEmployerVacancyCard(vacancy) {
     const workTypeText = vacancy.work_type === 'замена' ? 'Замена' : 'Временная';
     const scheduleText = `${vacancy.schedule_from} - ${vacancy.schedule_to}`;
     const salaryText = `${vacancy.salary_amount} KZT ${vacancy.salary_type}`;
+    const statusBadge = vacancy.status ? `<span class="status-badge status-${vacancy.status.toLowerCase()}">${getStatusText(vacancy.status)}</span>` : '';
+    const statusButtons = createStatusButtons(vacancy);
 
     return `
         <div class="vacancy-card" data-id="${vacancy.id}">
@@ -118,14 +174,16 @@ function createEmployerVacancyCard(vacancy) {
                         <span class="vacancy-meta-item">${formatDate(vacancy.start_date)} - ${formatDate(vacancy.end_date)}</span>
                         <span class="vacancy-meta-item">${scheduleText}</span>
                     </div>
+                    ${statusBadge}
                 </div>
             </div>
             <p class="vacancy-description">${truncateText(vacancy.description, 100)}</p>
             <div class="vacancy-footer">
                 <span class="vacancy-salary">${salaryText}</span>
                 <div class="vacancy-actions">
-                    <button class="btn btn-secondary edit-btn" data-id="${vacancy.id}">Редактировать</button>
-                    <button class="btn btn-secondary delete-btn" data-id="${vacancy.id}">Удалить</button>
+                    ${statusButtons}
+                    <button class="btn btn-outline edit-btn" data-id="${vacancy.id}">Редактировать</button>
+                    <button class="btn btn-outline delete-btn" data-id="${vacancy.id}">Удалить</button>
                 </div>
             </div>
         </div>
@@ -308,6 +366,254 @@ function formatDate(dateString) {
 function truncateText(text, maxLength) {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
+}
+
+// Get status text
+function getStatusText(status) {
+    const statusMap = {
+        'Открыта': 'Открыта',
+        'Забронирована': 'Забронирована',
+        'Закрыта': 'Закрыта',
+        'Архивная': 'В архиве'
+    };
+    return statusMap[status] || status;
+}
+
+// Create status control buttons
+function createStatusButtons(vacancy) {
+    if (vacancy.status === 'Архивная') {
+        return '<span class="status-archived">В архиве</span>';
+    }
+
+    let buttons = '';
+
+    if (vacancy.status === 'Открыта') {
+        buttons += `<button class="btn btn-warning status-btn" data-id="${vacancy.id}" data-status="Забронирована">Забронировать</button>`;
+    }
+
+    if (vacancy.status === 'Забронирована') {
+        buttons += `<button class="btn btn-success status-btn" data-id="${vacancy.id}" data-status="Закрыта">Закрыть</button>`;
+        buttons += `<button class="btn btn-outline status-btn" data-id="${vacancy.id}" data-status="Открыта">Вернуть в открытие</button>`;
+    }
+
+    if (vacancy.status === 'Закрыта') {
+        buttons += `<button class="btn btn-outline status-btn" data-id="${vacancy.id}" data-status="Открыта">Открыть снова</button>`;
+    }
+
+    return buttons;
+}
+
+// Handle status change
+async function handleStatusChange(vacancyId, newStatus) {
+    try {
+        const response = await fetch(`/api/employer/vacancies/${vacancyId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showMessage(`Статус вакансии изменен на "${getStatusText(newStatus)}"`, 'success');
+            loadActiveVacancies(); // Reload active vacancies
+        } else {
+            showMessage(data.error || 'Ошибка изменения статуса', 'error');
+        }
+    } catch (error) {
+        console.error('Error changing vacancy status:', error);
+        showMessage('Ошибка изменения статуса вакансии', 'error');
+    }
+}
+
+// Switch between tabs
+function switchTab(tabName) {
+    // Update tab buttons
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+
+    // Update tab content
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.classList.toggle('active', content.id === `${tabName}-vacancies-tab`);
+    });
+
+    // Load data for the tab
+    if (tabName === 'active') {
+        loadActiveVacancies();
+    } else if (tabName === 'archived') {
+        loadArchivedVacancies();
+    }
+}
+
+// Load active vacancies
+async function loadActiveVacancies() {
+    const vacanciesList = document.getElementById('active-vacancies');
+    if (!vacanciesList) return;
+
+    try {
+        const response = await fetch('/api/employer/vacancies');
+        const data = await response.json();
+
+        if (data.vacancies) {
+            const vacanciesHTML = data.vacancies.map(vacancy => createEmployerVacancyCard(vacancy)).join('');
+            vacanciesList.innerHTML = vacanciesHTML;
+
+            // Add event listeners for buttons
+            addVacancyEventListeners(vacanciesList);
+        } else {
+            vacanciesList.innerHTML = '<p>Активных вакансий нет</p>';
+        }
+    } catch (error) {
+        console.error('Error loading active vacancies:', error);
+        vacanciesList.innerHTML = '<p>Ошибка загрузки вакансий</p>';
+    }
+}
+
+// Load archived vacancies
+async function loadArchivedVacancies() {
+    const vacanciesList = document.getElementById('archived-vacancies');
+    if (!vacanciesList) return;
+
+    try {
+        const response = await fetch('/api/employer/vacancies/archived');
+        const data = await response.json();
+
+        if (data.vacancies && data.vacancies.length > 0) {
+            const vacanciesHTML = data.vacancies.map(vacancy => createEmployerVacancyCard(vacancy)).join('');
+            vacanciesList.innerHTML = vacanciesHTML;
+        } else {
+            vacanciesList.innerHTML = '<p>Архив пуст</p>';
+        }
+    } catch (error) {
+        console.error('Error loading archived vacancies:', error);
+        vacanciesList.innerHTML = '<p>Ошибка загрузки архива</p>';
+    }
+}
+
+// Open profile modal
+async function openProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    const form = document.getElementById('profile-form');
+
+    if (!modal || !form) return;
+
+    try {
+        const response = await fetch('/api/employer/profile');
+        const data = await response.json();
+
+        if (data.employer) {
+            fillProfileForm(data.employer);
+            modal.classList.add('active');
+        }
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showMessage('Ошибка загрузки профиля', 'error');
+    }
+}
+
+// Close profile modal
+function closeProfileModal() {
+    const modal = document.getElementById('profile-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Fill profile form with data
+function fillProfileForm(employer) {
+    document.getElementById('company-name').value = employer.organization_name || '';
+    document.getElementById('contact-name').value = employer.contact_name || '';
+    document.getElementById('company-phone').value = employer.phone || '';
+    document.getElementById('company-email').value = employer.email || '';
+    document.getElementById('company-city').value = employer.city || '';
+    document.getElementById('company-address').value = employer.address || '';
+    document.getElementById('company-description').value = employer.description || '';
+}
+
+// Handle profile form submission
+async function handleProfileSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const profileData = {
+        organization_name: formData.get('organization_name'),
+        contact_name: formData.get('contact_name'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        city: formData.get('city'),
+        address: formData.get('address'),
+        description: formData.get('description')
+    };
+
+    try {
+        const response = await fetch('/api/employer/profile', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(profileData)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showMessage('Профиль успешно обновлен', 'success');
+            closeProfileModal();
+            // Update current employer data
+            currentEmployer = data.employer;
+            updateWelcomeMessage();
+        } else {
+            showMessage(data.error || 'Ошибка обновления профиля', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        showMessage('Ошибка обновления профиля', 'error');
+    }
+}
+
+// Add event listeners for vacancy buttons
+function addVacancyEventListeners(container) {
+    // Edit buttons
+    const editButtons = container.querySelectorAll('.edit-btn');
+    editButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const vacancyId = button.dataset.id;
+            if (vacancyId) {
+                openVacancyModal(vacancyId);
+            }
+        });
+    });
+
+    // Delete buttons
+    const deleteButtons = container.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const vacancyId = button.dataset.id;
+            if (vacancyId && confirm('Вы уверены, что хотите удалить эту вакансию?')) {
+                deleteVacancy(vacancyId);
+            }
+        });
+    });
+
+    // Status change buttons
+    const statusButtons = container.querySelectorAll('.status-btn');
+    statusButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const vacancyId = button.dataset.id;
+            const newStatus = button.dataset.status;
+            if (vacancyId && newStatus) {
+                handleStatusChange(vacancyId, newStatus);
+            }
+        });
+    });
 }
 
 function showMessage(message, type = 'success') {

@@ -1,5 +1,5 @@
-// Configuration example
-// Copy this file to config.js and modify as needed
+// Configuration file
+// Copy this from config.example.js and modify as needed
 
 module.exports = {
   server: {
@@ -15,6 +15,8 @@ module.exports = {
   },
 
   email: {
+    // Для разработки - отключено, чтобы избежать ошибок
+    enabled: process.env.EMAIL_ENABLED === 'true',
     service: process.env.EMAIL_SERVICE || 'gmail',
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT) || 587,
