@@ -3,11 +3,75 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const db = require('./database/db');
 const emailService = require('./email');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Function to initialize database
+async function initializeDatabase() {
+    try {
+        console.log('Initializing database...');
+
+        // Execute schema using direct SQLite connection
+        const sqlite3 = require('sqlite3').verbose();
+        const dbPath = path.join(__dirname, 'database', 'temp_teachers.db');
+
+        return new Promise((resolve, reject) => {
+            const initDb = new sqlite3.Database(dbPath, (err) => {
+                if (err) {
+                    console.error('Error opening database:', err.message);
+                    reject(err);
+                    return;
+                }
+
+                // Check if tables already exist
+                initDb.all("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('employers', 'vacancies')", [], (err, rows) => {
+                    if (err) {
+                        initDb.close();
+                        reject(err);
+                        return;
+                    }
+
+                    const existingTables = rows.map(row => row.name);
+                    console.log('Existing tables:', existingTables);
+
+                    if (existingTables.includes('employers') && existingTables.includes('vacancies')) {
+                        console.log('Database tables already exist.');
+                        initDb.close();
+                        resolve();
+                        return;
+                    }
+
+                    // Read and execute schema if tables don't exist
+                    try {
+                        const schemaPath = path.join(__dirname, 'database', 'schema.sql');
+                        const schema = fs.readFileSync(schemaPath, 'utf8');
+
+                        initDb.exec(schema, (err) => {
+                            initDb.close();
+                            if (err) {
+                                console.error('Error creating tables:', err.message);
+                                reject(err);
+                                return;
+                            }
+                            console.log('Database tables created successfully.');
+                            resolve();
+                        });
+                    } catch (fsError) {
+                        initDb.close();
+                        reject(fsError);
+                    }
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Database initialization error:', error);
+        throw error;
+    }
+}
 
 // Function to archive expired vacancies
 async function archiveExpiredVacancies() {
@@ -18,7 +82,22 @@ async function archiveExpiredVacancies() {
             console.log(`Archived ${result.changes} expired vacancies`);
         }
     } catch (error) {
-        console.error('Error archiving expired vacancies:', error);
+        console.error('Error archiving expired vacancies:', error.message);
+        // If tables don't exist, try to initialize database
+        if (error.message && error.message.includes('no such table')) {
+            console.log('Tables not found, initializing database...');
+            try {
+                await initializeDatabase();
+                console.log('Database initialized, retrying archive check...');
+                // Try again after initialization
+                const result = await db.archiveExpiredVacancies();
+                if (result.changes > 0) {
+                    console.log(`Archived ${result.changes} expired vacancies`);
+                }
+            } catch (initError) {
+                console.error('Failed to initialize database:', initError.message);
+            }
+        }
     }
 }
 
@@ -503,16 +582,29 @@ app.get('/login', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, async () => {
-    console.log(`Temp Teachers Platform server running on port ${PORT}`);
-    console.log(`Visit http://localhost:${PORT}`);
+async function startServer() {
+    try {
+        // Initialize database first
+        await initializeDatabase();
 
-    // Archive expired vacancies on startup
-    await archiveExpiredVacancies();
+        // Start the server
+        app.listen(PORT, async () => {
+            console.log(`Temp Teachers Platform server running on port ${PORT}`);
+            console.log(`Visit http://localhost:${PORT}`);
 
-    // Set up daily check for expired vacancies (every 24 hours)
-    setInterval(archiveExpiredVacancies, 24 * 60 * 60 * 1000);
-});
+            // Archive expired vacancies on startup
+            await archiveExpiredVacancies();
+
+            // Set up daily check for expired vacancies (every 24 hours)
+            setInterval(archiveExpiredVacancies, 24 * 60 * 60 * 1000);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
 
 // Graceful shutdown
 process.on('SIGINT', () => {
