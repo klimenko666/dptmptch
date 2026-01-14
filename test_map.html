@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест OpenStreetMap + Leaflet</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 400px; width: 100%; border: 1px solid #ddd; border-radius: 5px; }
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+        input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; flex: 1; max-width: 400px; }
+        button { padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #5a6fd8; }
+        .info { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        .status { font-weight: bold; color: #28a745; }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Тест OpenStreetMap + Leaflet</h1>
+
+    <div class="controls">
+        <input type="text" id="address-input" placeholder="Введите адрес для поиска (например: Алматы, Абая 10)">
+        <button onclick="searchAddress()">🔍 Найти адрес</button>
+        <button onclick="clearMap()">🗑️ Очистить</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="info">
+        <p><strong>Инструкция:</strong></p>
+        <ul>
+            <li>🔍 Введите адрес и нажмите "Найти адрес" или Enter</li>
+            <li>🖱️ Кликните на карту для выбора места</li>
+            <li>📍 Выбранный адрес появится в статусе ниже</li>
+        </ul>
+        <p id="selected-info" class="status">Статус: Карта загружается...</p>
+    </div>
+
+    <script>
+        let mapInstance;
+        let currentMarker;
+        let selectedAddress = '';
+
+        // Initialize map
+        function initMap() {
+            try {
+                // Default center on Almaty
+                const center = [43.238949, 76.889709];
+
+                // Initialize Leaflet map
+                mapInstance = L.map('map').setView(center, 12);
+
+                // Add OpenStreetMap tiles
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }).addTo(mapInstance);
+
+                // Add click handler to map
+                mapInstance.on('click', function(e) {
+                    selectLocation(e.latlng.lat, e.latlng.lng);
+                });
+
+                updateStatus('Карта готова к использованию!');
+                console.log('✅ OpenStreetMap карта инициализирована успешно!');
+            } catch (error) {
+                console.error('❌ Ошибка инициализации карты:', error);
+                updateStatus('Ошибка загрузки карты', 'error');
+            }
+        }
+
+        // Select location and get address
+        function selectLocation(lat, lng) {
+            // Remove existing marker
+            if (currentMarker) {
+                mapInstance.removeLayer(currentMarker);
+            }
+
+            // Add new marker
+            currentMarker = L.marker([lat, lng]).addTo(mapInstance)
+                .bindPopup(`<b>Выбранная точка</b><br>Координаты: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
+                .openPopup();
+
+            // Center map on marker
+            mapInstance.setView([lat, lng], 16);
+
+            // Get address from coordinates (reverse geocoding)
+            reverseGeocode(lat, lng);
+        }
+
+        // Reverse geocoding using Nominatim
+        function reverseGeocode(lat, lng) {
+            updateStatus('Определяем адрес по координатам...');
+
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=ru`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        selectedAddress = data.display_name;
+                        updateStatus(`✅ Адрес найден: ${selectedAddress}`);
+                        console.log('📍 Адрес найден:', selectedAddress);
+                    } else {
+                        selectedAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        updateStatus(`📍 Адрес не найден, показываем координаты: ${selectedAddress}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Ошибка геокодирования:', error);
+                    selectedAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    updateStatus(`⚠️ Ошибка определения адреса, координаты: ${selectedAddress}`, 'warning');
+                });
+        }
+
+        // Search address
+        function searchAddress() {
+            const query = document.getElementById('address-input').value.trim();
+            if (!query) {
+                updateStatus('⚠️ Введите адрес для поиска');
+                return;
+            }
+
+            updateStatus('🔍 Ищем адрес...');
+
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=KZ&accept-language=ru`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const location = data[0];
+                        const lat = parseFloat(location.lat);
+                        const lng = parseFloat(location.lon);
+
+                        selectLocation(lat, lng);
+                        console.log('🎯 Адрес найден на карте:', location.display_name);
+                    } else {
+                        updateStatus('❌ Адрес не найден. Попробуйте другой запрос.');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Ошибка поиска адреса:', error);
+                    updateStatus('❌ Ошибка поиска адреса');
+                });
+        }
+
+        // Clear map
+        function clearMap() {
+            if (currentMarker) {
+                mapInstance.removeLayer(currentMarker);
+                currentMarker = null;
+            }
+            selectedAddress = '';
+            updateStatus('Карта очищена. Выберите новое место.');
+            document.getElementById('address-input').value = '';
+        }
+
+        // Update status display
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('selected-info');
+            statusEl.textContent = message;
+
+            // Remove existing classes
+            statusEl.className = 'status';
+
+            // Add appropriate class
+            if (type === 'error') {
+                statusEl.style.color = '#dc3545';
+            } else if (type === 'warning') {
+                statusEl.style.color = '#ffc107';
+            } else {
+                statusEl.style.color = '#28a745';
+            }
+        }
+
+        // Initialize on page load
+        window.onload = initMap;
+
+        // Allow Enter key in search input
+        document.getElementById('address-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchAddress();
+            }
+        });
+
+        // Add some helpful keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('address-input').focus();
+            }
+        });
+    </script>
+</body>
+</html>

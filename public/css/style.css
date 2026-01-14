@@ -497,6 +497,236 @@ body {
     min-height: 100px;
 }
 
+.work-days-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #f9f9f9;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.checkbox-label:hover {
+    background: #f0f0f0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    width: auto;
+}
+
+.address-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.address-input-group input {
+    flex: 1;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #ee5a52 0%, #dc4545 100%);
+    transform: translateY(-1px);
+}
+
+.vacancy-address {
+    display: block;
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* Map Modal Styles */
+.map-modal {
+    max-width: 900px;
+    width: 90vw;
+    height: 80vh;
+    max-height: 600px;
+}
+
+.map-container {
+    width: 100%;
+    height: 400px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+}
+
+/* Leaflet overrides for better integration */
+.leaflet-container {
+    border-radius: 5px;
+}
+
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+}
+
+.leaflet-popup-tip {
+    background-color: white;
+}
+
+.map-search {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.map-search input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.map-search input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* Date validation styles */
+.form-group input[type="date"]:invalid {
+    border-color: #dc3545;
+    background-color: #fff5f5;
+}
+
+.form-group input[type="date"]:valid {
+    border-color: #28a745;
+}
+
+/* Error message styling */
+.error-message {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+#map-container {
+    border-radius: 5px;
+}
+
+.map-instructions {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+}
+
+.map-instructions p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.selected-address {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.selected-address input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    background: #f8f9fa;
+}
+
+.selected-address input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+}
+
+/* Map Modal Styles */
+.map-modal {
+    width: 90%;
+    max-width: 800px;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.map-modal .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.map-search {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+}
+
+.map-search input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.map-container {
+    flex: 1;
+    min-height: 400px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 1rem;
+    margin-top: 0;
+}
+
+.selected-address {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+    font-size: 0.9rem;
+}
+
+.selected-address strong {
+    color: #333;
+}
+
+#selected-address-text {
+    margin-left: 0.5rem;
+    color: #666;
+}
+
+.map-modal .modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
 .form-actions {
     display: flex;
     gap: 1rem;

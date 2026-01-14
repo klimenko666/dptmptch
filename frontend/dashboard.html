@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Личный кабинет - TempTeachers</title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <header class="header">
@@ -85,16 +87,6 @@
                             <input type="email" id="company-email" name="email" required>
                         </div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="company-city">Город</label>
-                            <input type="text" id="company-city" name="city">
-                        </div>
-                        <div class="form-group">
-                            <label for="company-address">Адрес</label>
-                            <input type="text" id="company-address" name="address">
-                        </div>
-                    </div>
                     <div class="form-group">
                         <label for="company-description">Описание организации</label>
                         <textarea id="company-description" name="description" rows="4" placeholder="Расскажите о вашей организации, учебном заведении..."></textarea>
@@ -132,11 +124,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="vacancy-start">Дата начала *</label>
-                            <input type="date" id="vacancy-start" name="start_date" required>
+                            <input type="date" id="vacancy-start" name="start_date" required min="" onchange="updateEndDateMin()">
                         </div>
                         <div class="form-group">
                             <label for="vacancy-end">Дата окончания *</label>
-                            <input type="date" id="vacancy-end" name="end_date" required>
+                            <input type="date" id="vacancy-end" name="end_date" required min="" onchange="validateDates()">
                         </div>
                     </div>
 
@@ -171,6 +163,68 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="vacancy-work-days">Дни недели работы</label>
+                        <div class="work-days-selector" id="work-days-selector">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="work_days" value="monday"> Понедельник
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="work_days" value="tuesday"> Вторник
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="work_days" value="wednesday"> Среда
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="work_days" value="thursday"> Четверг
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="work_days" value="friday"> Пятница
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="work_days" value="saturday"> Суббота
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="work_days" value="sunday"> Воскресенье
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vacancy-address">Адрес работы</label>
+                        <div class="address-input-group">
+                            <input type="text" id="vacancy-address" name="address" placeholder="ул. Абая, 10, Алматы">
+                            <button type="button" class="btn btn-outline btn-small" id="pick-address-btn">Выбрать на карте</button>
+                        </div>
+                    </div>
+
+                    <!-- Address Picker Modal -->
+                    <div class="modal" id="address-picker-modal">
+                        <div class="modal-content map-modal">
+                            <div class="modal-header">
+                                <h3>Выберите адрес на карте</h3>
+                                <button class="modal-close" id="address-picker-close">&times;</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="map-search">
+                                    <input type="text" id="map-search-input" placeholder="Поиск адреса...">
+                                    <button type="button" class="btn btn-secondary" id="map-search-btn">🔍 Найти</button>
+                                </div>
+                                <div class="map-container">
+                                    <div id="map-container" style="width: 100%; height: 400px;"></div>
+                                </div>
+                                <div class="map-instructions">
+                                    <p>🔍 Введите адрес в поле поиска ИЛИ кликните на точку на карте</p>
+                                    <p>📍 Выбранный адрес появится в поле ниже</p>
+                                </div>
+                                <div class="selected-address">
+                                    <input type="text" id="selected-address-input" placeholder="Выбранный адрес" readonly>
+                                    <button type="button" class="btn btn-primary" id="confirm-address-btn">Подтвердить адрес</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label for="vacancy-description">Описание вакансии *</label>
                         <textarea id="vacancy-description" name="description" rows="4"
                             placeholder="Опишите обязанности, требования к кандидату и другие важные детали" required></textarea>
@@ -199,6 +253,31 @@
             </div>
         </div>
     </main>
+
+    <!-- Address Picker Modal -->
+    <div class="modal" id="address-picker-modal">
+        <div class="modal-content map-modal">
+            <div class="modal-header">
+                <h3>Выберите адрес на карте</h3>
+                <button class="modal-close" id="address-picker-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="map-search">
+                    <input type="text" id="map-search-input" placeholder="Поиск по адресу...">
+                    <button class="btn btn-primary" id="map-search-btn">Найти</button>
+                </div>
+                <div id="map-container" class="map-container"></div>
+                <div class="selected-address">
+                    <strong>Выбранный адрес:</strong>
+                    <span id="selected-address-text">Не выбран</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="address-picker-cancel">Отмена</button>
+                <button class="btn btn-primary" id="address-picker-confirm">Выбрать этот адрес</button>
+            </div>
+        </div>
+    </div>
 
     <footer class="footer">
         <div class="container">

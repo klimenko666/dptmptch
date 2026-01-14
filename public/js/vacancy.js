@@ -1,5 +1,22 @@
 // Vacancy detail page JavaScript
 
+// Helper function to format work days
+function formatWorkDays(workDays) {
+    if (!workDays || !Array.isArray(workDays) || workDays.length === 0) return 'Не указано';
+
+    const dayNames = {
+        monday: 'Понедельник',
+        tuesday: 'Вторник',
+        wednesday: 'Среда',
+        thursday: 'Четверг',
+        friday: 'Пятница',
+        saturday: 'Суббота',
+        sunday: 'Воскресенье'
+    };
+
+    return workDays.map(day => dayNames[day] || day).join(', ');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const vacancyId = getVacancyIdFromUrl();
     if (vacancyId) {
@@ -66,10 +83,24 @@ function displayVacancyDetail(vacancy) {
                 <div class="detail-value">${vacancy.schedule_from} - ${vacancy.schedule_to}</div>
             </div>
 
+            ${vacancy.work_days ? `
+            <div class="detail-item">
+                <div class="detail-label">Дни работы</div>
+                <div class="detail-value">${formatWorkDays(vacancy.work_days)}</div>
+            </div>
+            ` : ''}
+
             <div class="detail-item">
                 <div class="detail-label">Оплата</div>
                 <div class="detail-value">${vacancy.salary_amount} KZT ${vacancy.salary_type}</div>
             </div>
+
+            ${vacancy.address ? `
+            <div class="detail-item">
+                <div class="detail-label">Адрес</div>
+                <div class="detail-value">📍 ${vacancy.address}</div>
+            </div>
+            ` : ''}
         </div>
 
         <div class="vacancy-detail-description">
@@ -122,6 +153,12 @@ function createContactButtons(vacancy) {
     // Email button
     if (vacancy.contact_email) {
         buttons += `<a href="mailto:${vacancy.contact_email}" class="btn btn-secondary">📧 Написать</a>`;
+    }
+
+    // Map button (OpenStreetMap) - open vacancy address only
+    if (vacancy.address) {
+        const encodedAddress = encodeURIComponent(vacancy.address);
+        buttons += `<a href="https://www.openstreetmap.org/search?query=${encodedAddress}" target="_blank" class="btn btn-outline" title="Показать адрес вакансии на карте">🗺️ На карте</a>`;
     }
 
     return buttons;

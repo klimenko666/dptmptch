@@ -27,7 +27,7 @@ class Database {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve({ id: this.lastID, ...employerData });
+                    resolve({ id: this.lastID, organization_name, contact_name, phone, email, city, address, description });
                 }
             });
         });
@@ -62,13 +62,13 @@ class Database {
     // Vacancies methods
     createVacancy(vacancyData) {
         return new Promise((resolve, reject) => {
-            const { employer_id, subject, work_type, start_date, end_date, schedule_from, schedule_to, salary_amount, salary_type, description, contact_phone, contact_email, contact_person } = vacancyData;
+            const { employer_id, subject, work_type, start_date, end_date, schedule_from, schedule_to, work_days, salary_amount, salary_type, address, description, contact_phone, contact_email, contact_person } = vacancyData;
             const sql = `
-                INSERT INTO vacancies (employer_id, subject, work_type, start_date, end_date, schedule_from, schedule_to, salary_amount, salary_type, description, contact_phone, contact_email, contact_person, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Открыта')
+                INSERT INTO vacancies (employer_id, subject, work_type, start_date, end_date, schedule_from, schedule_to, work_days, salary_amount, salary_type, address, description, contact_phone, contact_email, contact_person, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Открыта')
             `;
 
-            this.db.run(sql, [employer_id, subject, work_type, start_date, end_date, schedule_from, schedule_to, salary_amount, salary_type, description, contact_phone, contact_email, contact_person], function(err) {
+            this.db.run(sql, [employer_id, subject, work_type, start_date, end_date, schedule_from, schedule_to, work_days ? JSON.stringify(work_days) : null, salary_amount, salary_type, address, description, contact_phone, contact_email, contact_person], function(err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -81,7 +81,7 @@ class Database {
     getVacancies(filters = {}) {
         return new Promise((resolve, reject) => {
             let sql = `
-                SELECT v.*, e.organization_name, e.contact_name, e.city, e.address
+                SELECT v.*, e.organization_name, e.contact_name, e.city
                 FROM vacancies v
                 JOIN employers e ON v.employer_id = e.id
                 WHERE v.status != 'Архивная'
@@ -115,7 +115,12 @@ class Database {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(rows);
+                    // Parse work_days JSON for each row
+                    const processedRows = rows.map(row => ({
+                        ...row,
+                        work_days: row.work_days ? JSON.parse(row.work_days) : null
+                    }));
+                    resolve(processedRows);
                 }
             });
         });
@@ -124,7 +129,7 @@ class Database {
     getVacancyById(id) {
         return new Promise((resolve, reject) => {
             const sql = `
-                SELECT v.*, e.organization_name, e.contact_name, e.phone, e.email, e.city, e.address, e.description
+                SELECT v.*, e.organization_name, e.contact_name, e.phone, e.email, e.city, e.description
                 FROM vacancies v
                 JOIN employers e ON v.employer_id = e.id
                 WHERE v.id = ?
@@ -133,7 +138,12 @@ class Database {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(row);
+                    // Parse work_days JSON if exists
+                    const processedRow = row ? {
+                        ...row,
+                        work_days: row.work_days ? JSON.parse(row.work_days) : null
+                    } : null;
+                    resolve(processedRow);
                 }
             });
         });
@@ -159,7 +169,12 @@ class Database {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(rows);
+                    // Parse work_days JSON for each row
+                    const processedRows = rows.map(row => ({
+                        ...row,
+                        work_days: row.work_days ? JSON.parse(row.work_days) : null
+                    }));
+                    resolve(processedRows);
                 }
             });
         });
@@ -167,14 +182,14 @@ class Database {
 
     updateVacancy(id, vacancyData) {
         return new Promise((resolve, reject) => {
-            const { subject, work_type, start_date, end_date, schedule_from, schedule_to, salary_amount, salary_type, description, contact_phone, contact_email, contact_person, status } = vacancyData;
+            const { subject, work_type, start_date, end_date, schedule_from, schedule_to, work_days, salary_amount, salary_type, address, description, contact_phone, contact_email, contact_person, status } = vacancyData;
             const sql = `
                 UPDATE vacancies
-                SET subject = ?, work_type = ?, start_date = ?, end_date = ?, schedule_from = ?, schedule_to = ?, salary_amount = ?, salary_type = ?, description = ?, contact_phone = ?, contact_email = ?, contact_person = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+                SET subject = ?, work_type = ?, start_date = ?, end_date = ?, schedule_from = ?, schedule_to = ?, work_days = ?, salary_amount = ?, salary_type = ?, address = ?, description = ?, contact_phone = ?, contact_email = ?, contact_person = ?, status = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             `;
 
-            this.db.run(sql, [subject, work_type, start_date, end_date, schedule_from, schedule_to, salary_amount, salary_type, description, contact_phone, contact_email, contact_person, status || 'Открыта', id], function(err) {
+            this.db.run(sql, [subject, work_type, start_date, end_date, schedule_from, schedule_to, work_days ? JSON.stringify(work_days) : null, salary_amount, salary_type, address, description, contact_phone, contact_email, contact_person, status || 'Открыта', id], function(err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -237,14 +252,14 @@ class Database {
 
     updateEmployerProfile(id, profileData) {
         return new Promise((resolve, reject) => {
-            const { organization_name, contact_name, phone, email, city, address, description } = profileData;
+            const { organization_name, contact_name, phone, email, description } = profileData;
             const sql = `
                 UPDATE employers
-                SET organization_name = ?, contact_name = ?, phone = ?, email = ?, city = ?, address = ?, description = ?
+                SET organization_name = ?, contact_name = ?, phone = ?, email = ?, description = ?
                 WHERE id = ?
             `;
 
-            this.db.run(sql, [organization_name, contact_name, phone, email, city, address, description, id], function(err) {
+            this.db.run(sql, [organization_name, contact_name, phone, email, description, id], function(err) {
                 if (err) {
                     reject(err);
                 } else {
@@ -262,6 +277,19 @@ class Database {
                     reject(err);
                 } else {
                     resolve(row);
+                }
+            });
+        });
+    }
+
+    restoreVacancy(id) {
+        return new Promise((resolve, reject) => {
+            const sql = "UPDATE vacancies SET status = 'Открыта', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'Архивная'";
+            this.db.run(sql, [id], function(err) {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve({ changes: this.changes, id });
                 }
             });
         });

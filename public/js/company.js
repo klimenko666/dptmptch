@@ -91,7 +91,6 @@ function displayCompanyDetail(company) {
                 <a href="tel:${company.phone}" class="btn btn-primary">📞 Позвонить</a>
                 <a href="https://wa.me/${company.phone.replace(/[\s\-\(\)\+]/g, '')}" target="_blank" class="btn btn-secondary">💬 WhatsApp</a>
                 <a href="mailto:${company.email}" class="btn btn-secondary">📧 Написать</a>
-                <button onclick="showContactForm()" class="btn btn-outline">❓ Задать вопрос</button>
             </div>
         </div>
     `;
@@ -114,7 +113,3 @@ function formatLocation(company) {
     return location.join(', ') || 'Местоположение не указано';
 }
 
-// Show contact form (placeholder for future implementation)
-function showContactForm() {
-    alert('Функционал связи с компанией будет реализован в ближайшее время.');
-}

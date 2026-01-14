@@ -7,6 +7,9 @@ const fs = require('fs');
 const db = require('./database/db');
 const emailService = require('./email');
 
+// Flag to prevent multiple migrations
+let migrationCompleted = false;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -14,6 +17,12 @@ const PORT = process.env.PORT || 3000;
 async function initializeDatabase() {
     try {
         console.log('Initializing database...');
+
+        // Check if migration already completed
+        if (migrationCompleted) {
+            console.log('Database already initialized, skipping...');
+            return Promise.resolve();
+        }
 
         // Execute schema using direct SQLite connection
         const sqlite3 = require('sqlite3').verbose();
@@ -39,9 +48,89 @@ async function initializeDatabase() {
                     console.log('Existing tables:', existingTables);
 
                     if (existingTables.includes('employers') && existingTables.includes('vacancies')) {
-                        console.log('Database tables already exist.');
-                        initDb.close();
-                        resolve();
+                        // Tables exist, check for missing columns
+                        console.log('Checking for missing columns...');
+
+                        // Check vacancies table columns
+                        initDb.all("PRAGMA table_info(vacancies)", [], (err, columns) => {
+                            if (err) {
+                                initDb.close();
+                                reject(err);
+                                return;
+                            }
+
+                            const columnNames = columns.map(col => col.name);
+                            console.log('Vacancies columns:', columnNames);
+
+                            let migrations = [];
+
+                            if (!columnNames.includes('work_days')) {
+                                migrations.push("ALTER TABLE vacancies ADD COLUMN work_days TEXT");
+                            }
+
+                            if (!columnNames.includes('address')) {
+                                migrations.push("ALTER TABLE vacancies ADD COLUMN address TEXT");
+                            }
+
+                            if (migrations.length > 0) {
+                                console.log('Applying migrations:', migrations);
+
+                                // Execute migrations one by one
+                                let migrationIndex = 0;
+                                const executeMigration = () => {
+                                    if (migrationIndex >= migrations.length) {
+                                        console.log('All migrations applied successfully.');
+                                        migrationCompleted = true;
+                                        initDb.close();
+                                        resolve();
+                                        return;
+                                    }
+
+                                    const migration = migrations[migrationIndex];
+                                    console.log(`Executing: ${migration}`);
+
+                                    initDb.run(migration, (err) => {
+                                        if (err) {
+                                            console.error(`Error executing migration: ${migration}`, err);
+                                            initDb.close();
+                                            reject(err);
+                                            return;
+                                        }
+
+                                        migrationIndex++;
+                                        executeMigration();
+                                    });
+                                };
+
+                                executeMigration();
+                            } else {
+                                console.log('Database is up to date.');
+                                // Check if tables are empty and add sample data if needed
+                                initDb.get("SELECT COUNT(*) as count FROM employers", [], (err, row) => {
+                                    if (err) {
+                                        console.error('Error checking employers count:', err);
+                                        initDb.close();
+                                        migrationCompleted = true;
+                                        resolve();
+                                        return;
+                                    }
+
+                                    if (row.count === 0) {
+                                        console.log('Adding sample data...');
+                                        addSampleData(initDb, () => {
+                                            initDb.close();
+                                            migrationCompleted = true;
+                                            resolve();
+                                        });
+                                    } else {
+                                        console.log('Database already has data.');
+                                        initDb.close();
+                                        migrationCompleted = true;
+                                        resolve();
+                                    }
+                                });
+                            }
+                        });
                         return;
                     }
 
@@ -58,6 +147,7 @@ async function initializeDatabase() {
                                 return;
                             }
                             console.log('Database tables created successfully.');
+                            migrationCompleted = true;
                             resolve();
                         });
                     } catch (fsError) {
@@ -312,7 +402,7 @@ app.get('/api/employer/profile', requireAuth, async (req, res) => {
 // Update employer profile (protected)
 app.put('/api/employer/profile', requireAuth, async (req, res) => {
     try {
-        const { organization_name, contact_name, phone, email, city, address, description } = req.body;
+        const { organization_name, contact_name, phone, email, description } = req.body;
 
         // Validation
         if (!organization_name || !contact_name || !phone || !email) {
@@ -330,8 +420,6 @@ app.put('/api/employer/profile', requireAuth, async (req, res) => {
             contact_name,
             phone,
             email,
-            city,
-            address,
             description
         });
 
@@ -370,11 +458,31 @@ app.get('/api/companies/vacancy/:vacancyId', async (req, res) => {
 // Create vacancy (protected)
 app.post('/api/employer/vacancies', requireAuth, async (req, res) => {
     try {
-        const { subject, work_type, start_date, end_date, schedule_from, schedule_to, salary_amount, salary_type, description, contact_phone, contact_email, contact_person } = req.body;
+        const { subject, work_type, start_date, end_date, schedule_from, schedule_to, work_days, salary_amount, salary_type, address, description, contact_phone, contact_email, contact_person } = req.body;
 
         // Validation
         if (!subject || !work_type || !start_date || !end_date || !schedule_from || !schedule_to || !salary_amount || !salary_type || !description || !contact_phone) {
             return res.status(400).json({ error: 'All required fields must be filled' });
+        }
+
+        // Validate dates
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+
+        if (startDate < today) {
+            return res.status(400).json({ error: 'Start date cannot be in the past' });
+        }
+
+        if (endDate < startDate) {
+            return res.status(400).json({ error: 'End date cannot be before start date' });
+        }
+
+        // Validate work_days
+        if (work_days && (!Array.isArray(work_days) || work_days.length === 0)) {
+            return res.status(400).json({ error: 'Work days must be a non-empty array' });
         }
 
         if (!['замена', 'временная'].includes(work_type)) {
@@ -397,8 +505,10 @@ app.post('/api/employer/vacancies', requireAuth, async (req, res) => {
             end_date,
             schedule_from,
             schedule_to,
+            work_days,
             salary_amount: parseInt(salary_amount),
             salary_type,
+            address,
             description,
             contact_phone,
             contact_email,
@@ -425,7 +535,7 @@ app.post('/api/employer/vacancies', requireAuth, async (req, res) => {
 app.put('/api/employer/vacancies/:id', requireAuth, async (req, res) => {
     try {
         const vacancyId = req.params.id;
-        const { subject, work_type, start_date, end_date, schedule_from, schedule_to, salary_amount, salary_type, description, contact_phone, contact_email, contact_person } = req.body;
+        const { subject, work_type, start_date, end_date, schedule_from, schedule_to, work_days, salary_amount, salary_type, address, description, contact_phone, contact_email, contact_person } = req.body;
 
         // Check if vacancy belongs to employer
         const existingVacancy = await db.getVacancyById(vacancyId);
@@ -436,6 +546,21 @@ app.put('/api/employer/vacancies/:id', requireAuth, async (req, res) => {
         // Validation
         if (!subject || !work_type || !start_date || !end_date || !schedule_from || !schedule_to || !salary_amount || !salary_type || !description || !contact_phone) {
             return res.status(400).json({ error: 'All required fields must be filled' });
+        }
+
+        // Validate dates
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+
+        if (startDate < today) {
+            return res.status(400).json({ error: 'Start date cannot be in the past' });
+        }
+
+        if (endDate < startDate) {
+            return res.status(400).json({ error: 'End date cannot be before start date' });
         }
 
         if (!['замена', 'временная'].includes(work_type)) {
@@ -450,6 +575,11 @@ app.put('/api/employer/vacancies/:id', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'Salary amount must be a positive number' });
         }
 
+        // Validate work_days
+        if (work_days && (!Array.isArray(work_days) || work_days.length === 0)) {
+            return res.status(400).json({ error: 'Work days must be a non-empty array' });
+        }
+
         const result = await db.updateVacancy(vacancyId, {
             subject,
             work_type,
@@ -457,8 +587,10 @@ app.put('/api/employer/vacancies/:id', requireAuth, async (req, res) => {
             end_date,
             schedule_from,
             schedule_to,
+            work_days,
             salary_amount: parseInt(salary_amount),
             salary_type,
+            address,
             description,
             contact_phone,
             contact_email,
@@ -530,6 +662,55 @@ app.patch('/api/employer/vacancies/:id/status', requireAuth, async (req, res) =>
 });
 
 // Delete vacancy (protected)
+// Archive vacancy (move to archive)
+app.patch('/api/employer/vacancies/:id/archive', requireAuth, async (req, res) => {
+    try {
+        const vacancyId = req.params.id;
+
+        // Check if vacancy belongs to employer
+        const existingVacancy = await db.getVacancyById(vacancyId);
+        if (!existingVacancy || existingVacancy.employer_id !== req.session.employerId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const result = await db.updateVacancyStatus(vacancyId, 'Архивная');
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Vacancy not found' });
+        }
+
+        const updatedVacancy = await db.getVacancyById(vacancyId);
+        res.json({ vacancy: updatedVacancy });
+    } catch (error) {
+        console.error('Archive vacancy error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Restore vacancy from archive
+app.patch('/api/employer/vacancies/:id/restore', requireAuth, async (req, res) => {
+    try {
+        const vacancyId = req.params.id;
+
+        // Check if vacancy belongs to employer
+        const existingVacancy = await db.getVacancyById(vacancyId);
+        if (!existingVacancy || existingVacancy.employer_id !== req.session.employerId) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        const result = await db.restoreVacancy(vacancyId);
+        if (result.changes === 0) {
+            return res.status(404).json({ error: 'Vacancy not found or not archived' });
+        }
+
+        const updatedVacancy = await db.getVacancyById(vacancyId);
+        res.json({ vacancy: updatedVacancy });
+    } catch (error) {
+        console.error('Restore vacancy error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Permanently delete vacancy
 app.delete('/api/employer/vacancies/:id', requireAuth, async (req, res) => {
     try {
         const vacancyId = req.params.id;
@@ -545,7 +726,7 @@ app.delete('/api/employer/vacancies/:id', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Vacancy not found' });
         }
 
-        res.json({ message: 'Vacancy deleted successfully' });
+        res.json({ message: 'Vacancy permanently deleted successfully' });
     } catch (error) {
         console.error('Delete vacancy error:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -605,6 +786,101 @@ async function startServer() {
 }
 
 startServer();
+
+// Add sample data to empty database
+function addSampleData(db, callback) {
+    // Add employer
+    const employerSql = `
+        INSERT INTO employers (organization_name, contact_name, phone, email, password_hash, description)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    // Hash for "password"
+    const hashedPassword = '$2a$10$example.hash.for.demo.purposes.only';
+
+    db.run(employerSql, [
+        'Образовательный центр "Техно"',
+        'Иван Петрович Сидоров',
+        '+7 (777) 123-45-67',
+        'hr@techno-center.kz',
+        hashedPassword,
+        'Современный образовательный центр с передовыми технологиями обучения'
+    ], function(err) {
+        if (err) {
+            console.error('Error adding sample employer:', err);
+            callback();
+            return;
+        }
+
+        const employerId = this.lastID;
+        console.log(`✅ Sample employer added (ID: ${employerId})`);
+
+        // Add sample vacancies with addresses
+        const vacancies = [
+            {
+                subject: 'Математика',
+                work_type: 'замена',
+                start_date: '2025-01-15',
+                end_date: '2025-01-22',
+                schedule_from: '09:00',
+                schedule_to: '15:00',
+                work_days: JSON.stringify(['monday', 'tuesday', 'wednesday', 'thursday', 'friday']),
+                salary_amount: 25000,
+                salary_type: 'в месяц',
+                address: 'ул. Абая, 10, Алматы',
+                description: 'Замена преподавателя математики на период болезни. Опыт преподавания в колледже приветствуется.',
+                contact_phone: '+7 (777) 123-45-67',
+                contact_email: 'hr@techno-center.kz',
+                contact_person: 'Иван Петрович'
+            },
+            {
+                subject: 'Информатика',
+                work_type: 'временная',
+                start_date: '2025-01-20',
+                end_date: '2025-02-10',
+                schedule_from: '14:00',
+                schedule_to: '20:00',
+                work_days: JSON.stringify(['monday', 'wednesday', 'friday']),
+                salary_amount: 30000,
+                salary_type: 'в месяц',
+                address: 'пр. Назарбаева, 45, Алматы',
+                description: 'Временная нагрузка по информатике. Требуется знание Python, C++, алгоритмов.',
+                contact_phone: '+7 (777) 123-45-67',
+                contact_email: 'hr@techno-center.kz',
+                contact_person: 'Мария Сергеевна'
+            }
+        ];
+
+        let addedCount = 0;
+        vacancies.forEach((vacancy, index) => {
+            const sql = `
+                INSERT INTO vacancies (
+                    employer_id, subject, work_type, start_date, end_date,
+                    schedule_from, schedule_to, work_days, salary_amount, salary_type,
+                    address, description, contact_phone, contact_email, contact_person
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            db.run(sql, [
+                employerId, vacancy.subject, vacancy.work_type, vacancy.start_date, vacancy.end_date,
+                vacancy.schedule_from, vacancy.schedule_to, vacancy.work_days, vacancy.salary_amount, vacancy.salary_type,
+                vacancy.address, vacancy.description, vacancy.contact_phone, vacancy.contact_email, vacancy.contact_person
+            ], (err) => {
+                if (err) {
+                    console.error(`❌ Error adding vacancy ${index + 1}:`, err);
+                } else {
+                    addedCount++;
+                    console.log(`✅ Vacancy "${vacancy.subject}" added with address`);
+                }
+
+                if (addedCount === vacancies.length) {
+                    console.log(`🎉 Added ${addedCount} sample vacancies with addresses`);
+                    callback();
+                }
+            });
+        });
+    });
+}
 
 // Graceful shutdown
 process.on('SIGINT', () => {

@@ -24,8 +24,10 @@ CREATE TABLE IF NOT EXISTS vacancies (
     end_date DATE NOT NULL,
     schedule_from TEXT NOT NULL,
     schedule_to TEXT NOT NULL,
+    work_days TEXT, -- JSON array of work days, e.g., ["monday", "tuesday", "wednesday"]
     salary_amount INTEGER NOT NULL,
     salary_type TEXT NOT NULL CHECK (salary_type IN ('в месяц', 'за час', 'за день', 'за неделю', 'за урок', 'за смену')),
+    address TEXT, -- Address for the vacancy location
     description TEXT NOT NULL,
     contact_phone TEXT NOT NULL,
     contact_email TEXT,
@@ -42,6 +44,8 @@ CREATE TABLE IF NOT EXISTS vacancies (
 -- ALTER TABLE employers ADD COLUMN description TEXT;
 -- ALTER TABLE vacancies ADD COLUMN status TEXT DEFAULT 'Открыта';
 -- ALTER TABLE vacancies ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP;
+-- ALTER TABLE vacancies ADD COLUMN work_days TEXT;
+-- ALTER TABLE vacancies ADD COLUMN address TEXT;
 -- UPDATE vacancies SET status = 'Открыта' WHERE status IS NULL;
 
 -- Update existing vacancies status if NULL
